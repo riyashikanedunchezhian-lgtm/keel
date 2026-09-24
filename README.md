@@ -19,7 +19,7 @@ npm run build
 npm start
 ```
 
-`npm start` serves the production server on port 3847.
+`npm start` serves the production server on port 3847, or on `PORT` when a host such as Render sets that variable.
 
 `prefers-reduced-motion` skips the hero sequence.
 
