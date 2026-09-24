@@ -2,6 +2,8 @@
 
 Keel is a marketing site for a product workspace: issues, projects, and cycles in one place. The copy and layout are built to feel quiet — near-black background, one amber accent, and a single load-in on the hero.
 
+The live site is [https://keelx.onrender.com/](https://keelx.onrender.com/).
+
 This README walks the site in the order a visitor sees it, using every screenshot in [`images/`](images/). Company names in the customers strip are fictional. **Start a workspace** and **Log in** create a real account: the password is hashed, the session is an httpOnly cookie, and the record is stored in `data/accounts.json` (not committed).
 
 ## Run it
