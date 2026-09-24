@@ -21,6 +21,63 @@ npm start
 
 `prefers-reduced-motion` skips the hero sequence and the confirmation after you submit a form.
 
+CI is `.github/workflows/ci.yml` (lint + production build on Node 22). Netlify is pinned in `netlify.toml`: build `npm run build`, publish `.next`, Node 22. Do not set the publish folder to `out`, `public`, or `dist` — that is why this site fails on Netlify.
+
+## GitHub: commands that pass
+
+From the repo root (Git for Windows: `"C:\Program Files\Git\bin\git.exe"` if `git` is not on PATH):
+
+```bash
+git status
+git add -A
+git commit -m "Make the site ready for Netlify and GitHub CI."
+git branch -M main
+```
+
+First push (replace `YOUR_USER` and the repo name):
+
+```bash
+git remote add origin https://github.com/YOUR_USER/kneel.git
+git push -u origin main
+```
+
+Later pushes:
+
+```bash
+git add -A
+git commit -m "Describe the change."
+git push
+```
+
+A pull request against `main` runs the same checks as GitHub Actions. Locally, match CI with:
+
+```bash
+npm ci
+npm run lint
+npm run build
+```
+
+`npm run build` must finish with no TypeScript or lint errors before you push. Netlify runs that same command.
+
+## Deploy live on Netlify
+
+1. Push `main` to GitHub using the commands above.
+2. Open [Netlify](https://app.netlify.com) → **Add new site** → **Import an existing project** → GitHub → this repo.
+3. Confirm settings (they should already match `netlify.toml`):
+   - Branch: `main`
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+   - Node: `22` (from `.nvmrc`)
+4. Deploy. The live URL is `https://<site-name>.netlify.app`. You can attach a custom domain under **Domain management**.
+
+Every later `git push` to `main` redeploys production. Pull requests get Netlify preview URLs.
+
+If a deploy still fails, check these in the Netlify log:
+
+- Publish directory is `.next`, not `out` or `public` (Next 15 does not create an `out` folder unless you set `output: "export"`).
+- Node is 20 or 22, not 16/18.
+- `npm ci` uses the committed `package-lock.json`.
+
 ## Visual system
 
 | Token | Role |

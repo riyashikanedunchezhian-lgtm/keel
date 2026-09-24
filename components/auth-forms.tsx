@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { plans, type Plan } from "@/lib/plans";
+import { findPlan, plans, type Plan } from "@/lib/plans";
+
+export function SignupFormFromQuery() {
+  const searchParams = useSearchParams();
+  return <SignupForm plan={findPlan(searchParams.get("plan") ?? undefined)} />;
+}
 
 function looksLikeEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);

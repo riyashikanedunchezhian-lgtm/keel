@@ -4,6 +4,8 @@ import { notFound } from "next/navigation";
 import { Frame } from "@/components/frame";
 import { docs, findDoc } from "@/lib/docs";
 
+export const dynamicParams = false;
+
 export function generateStaticParams() {
   return docs.map((doc) => ({ slug: doc.slug }));
 }
