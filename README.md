@@ -19,9 +19,11 @@ npm run build
 npm start
 ```
 
+`npm run build` writes a static site to `out/`. `npm start` serves that folder on port 3847.
+
 `prefers-reduced-motion` skips the hero sequence and the confirmation after you submit a form.
 
-CI is `.github/workflows/ci.yml` (lint + production build on Node 22). Netlify is pinned in `netlify.toml`: build `npm run build`, publish `.next`, Node 22. Do not set the publish folder to `out`, `public`, or `dist` — that is why this site fails on Netlify.
+The site is hosted on **GitHub Pages** from this repo. `.github/workflows/ci.yml` lints, exports static HTML, and deploys `out/` on every push to `main`.
 
 ## GitHub: commands that pass
 
@@ -30,7 +32,7 @@ From the repo root (Git for Windows: `"C:\Program Files\Git\bin\git.exe"` if `gi
 ```bash
 git status
 git add -A
-git commit -m "Make the site ready for Netlify and GitHub CI."
+git commit -m "Host the site on GitHub Pages."
 git branch -M main
 ```
 
@@ -49,7 +51,7 @@ git commit -m "Describe the change."
 git push
 ```
 
-A pull request against `main` runs the same checks as GitHub Actions. Locally, match CI with:
+Match the GitHub Action locally before you push:
 
 ```bash
 npm ci
@@ -57,26 +59,19 @@ npm run lint
 npm run build
 ```
 
-`npm run build` must finish with no TypeScript or lint errors before you push. Netlify runs that same command.
+## Deploy live on GitHub Pages
 
-## Deploy live on Netlify
+1. Make the GitHub repo **public** (Pages on a free private repo needs GitHub Pro).
+2. Push `main` with the commands above.
+3. In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+4. Open the **Actions** tab and wait for **GitHub Pages** to finish. The first run may ask you to approve the `github-pages` environment.
+5. The live URL is:
 
-1. Push `main` to GitHub using the commands above.
-2. Open [Netlify](https://app.netlify.com) → **Add new site** → **Import an existing project** → GitHub → this repo.
-3. Confirm settings (they should already match `netlify.toml`):
-   - Branch: `main`
-   - Build command: `npm run build`
-   - Publish directory: `.next`
-   - Node: `22` (from `.nvmrc`)
-4. Deploy. The live URL is `https://<site-name>.netlify.app`. You can attach a custom domain under **Domain management**.
+`https://YOUR_USER.github.io/kneel/`
 
-Every later `git push` to `main` redeploys production. Pull requests get Netlify preview URLs.
+(If the repo is named `YOUR_USER.github.io`, the site is at `https://YOUR_USER.github.io/` with no extra path.)
 
-If a deploy still fails, check these in the Netlify log:
-
-- Publish directory is `.next`, not `out` or `public` (Next 15 does not create an `out` folder unless you set `output: "export"`).
-- Node is 20 or 22, not 16/18.
-- `npm ci` uses the committed `package-lock.json`.
+Every later `git push` to `main` republishes the site. The workflow sets `basePath` to `/<repo-name>` so CSS, JS, and links work under that subpath. `.nojekyll` is included so GitHub does not hide the `_next` folder.
 
 ## Visual system
 
