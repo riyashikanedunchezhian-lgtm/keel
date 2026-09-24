@@ -2,7 +2,7 @@
 
 Keel is a marketing site for a product workspace: issues, projects, and cycles in one place. The copy and layout are built to feel quiet — near-black background, one amber accent, and a single load-in on the hero.
 
-This README walks the site in the order a visitor sees it, using every screenshot in [`images/`](images/). Company names in the customers strip are fictional. Signup and login validate, then stop: this preview stores nothing on a server.
+This README walks the site in the order a visitor sees it, using every screenshot in [`images/`](images/). Company names in the customers strip are fictional. **Start a workspace** and **Log in** create a real account: the password is hashed, the session is an httpOnly cookie, and the record is stored in `data/accounts.json` (not committed).
 
 ## Run it
 
@@ -11,7 +11,7 @@ npm install
 npm run dev
 ```
 
-The Next.js app (Turbopack) listens on [http://127.0.0.1:3847](http://127.0.0.1:3847).
+The Next.js app (Turbopack) listens on [http://127.0.0.1:3847](http://127.0.0.1:3847). Signup, login, and `/account` need this server. GitHub Pages is static and cannot run the auth API.
 
 ```bash
 npm run lint
@@ -19,59 +19,33 @@ npm run build
 npm start
 ```
 
-`npm run build` writes a static site to `out/`. `npm start` serves that folder on port 3847.
+`npm start` serves the production server on port 3847.
 
-`prefers-reduced-motion` skips the hero sequence and the confirmation after you submit a form.
+`prefers-reduced-motion` skips the hero sequence.
 
-The site is hosted on **GitHub Pages** from this repo. `.github/workflows/ci.yml` lints, exports static HTML, and deploys `out/` on every push to `main`.
+## Accounts
 
-## GitHub: commands that pass
+| Action | What happens |
+| --- | --- |
+| `POST /api/auth/signup` | Creates the workspace, hashes the password with scrypt, sets a 14-day cookie |
+| `POST /api/auth/login` | Checks the password and sets the same cookie. Wrong email and wrong password return the same error |
+| `GET /api/auth/me` | Returns the signed-in workspace, email, and plan |
+| `POST /api/auth/logout` | Deletes that session |
+| `/account` | The page you land on after signup or login |
 
-From the repo root (Git for Windows: `"C:\Program Files\Git\bin\git.exe"` if `git` is not on PATH):
+Passwords are at least 8 characters. A duplicate email is rejected. Eight tries in ten minutes from the same address pauses signup and login. The cookie is `keel_session`, httpOnly, SameSite=Lax, and `Secure` in production.
 
-```bash
-git status
-git add -A
-git commit -m "Host the site on GitHub Pages."
-git branch -M main
-```
+## GitHub
 
-First push (replace `YOUR_USER` and the repo name):
-
-```bash
-git remote add origin https://github.com/YOUR_USER/kneel.git
-git push -u origin main
-```
-
-Later pushes:
+`.github/workflows/ci.yml` runs lint and `npm run build` on Node 22. It does not publish the site: a static host cannot keep the session or the account file.
 
 ```bash
 git add -A
-git commit -m "Describe the change."
+git commit -m "Add workspace signup and login."
 git push
 ```
 
-Match the GitHub Action locally before you push:
-
-```bash
-npm ci
-npm run lint
-npm run build
-```
-
-## Deploy live on GitHub Pages
-
-1. Make the GitHub repo **public** (Pages on a free private repo needs GitHub Pro).
-2. Push `main` with the commands above.
-3. In the repo: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
-4. Open the **Actions** tab and wait for **GitHub Pages** to finish. The first run may ask you to approve the `github-pages` environment.
-5. The live URL is:
-
-`https://YOUR_USER.github.io/kneel/`
-
-(If the repo is named `YOUR_USER.github.io`, the site is at `https://YOUR_USER.github.io/` with no extra path.)
-
-Every later `git push` to `main` republishes the site. The workflow sets `basePath` to `/<repo-name>` so CSS, JS, and links work under that subpath. `.nojekyll` is included so GitHub does not hide the `_next` folder.
+To run it yourself after a clone: `npm install` then `npm run dev`.
 
 ## Visual system
 
@@ -93,7 +67,8 @@ Type is Instrument Sans. Motion is limited to the hero reveal and form confirmat
 | `/pricing` | Same plans plus FAQ |
 | `/docs` | Index of four short articles |
 | `/docs/getting-started`, `/docs/keyboard`, `/docs/cycles`, `/docs/triage` | Individual articles |
-| `/signup`, `/login` | Forms that validate, then stop |
+| `/signup`, `/login` | Create a workspace or sign in. Both set a session cookie |
+| `/account` | The signed-in workspace |
 | `/privacy`, `/terms` | Legal copy |
 
 ---
@@ -261,13 +236,11 @@ Rare commands stay in the menu. The other articles: Getting started, Cycles, Tri
 
 ---
 
-## 13. Workspace confirmed
+## 13. Start a workspace
 
-Submit a valid work email on the closing form and the field is replaced by a confirmation: **Workspace reserved for you@…** This preview stops here. Nothing was sent, and nothing was stored. **Use a different email** puts the form back.
+The closing email form checks the address, then opens `/signup` with that email filled in. Signup asks for a workspace name, password, and plan, then `POST /api/auth/signup` stores the account and signs you in. Login uses `POST /api/auth/login`. Both land on `/account`.
 
-That is the only post-submit motion besides the hero load-in.
-
-![Closing CTA after a successful workspace email, confirmation instead of the form](images/workspace-confirmed.png)
+![Older closing-form confirmation, before accounts were stored](images/workspace-confirmed.png)
 
 ---
 
@@ -289,7 +262,7 @@ Every file in `images/`:
 | `images/pricing-page.png` | 10. Pricing page |
 | `images/footer.png` | 11. Closing CTA and footer |
 | `images/docs-keyboard.png` | 12. Docs: Keyboard |
-| `images/workspace-confirmed.png` | 13. Workspace confirmed |
+| `images/workspace-confirmed.png` | 13. Start a workspace |
 
 ## Stack
 

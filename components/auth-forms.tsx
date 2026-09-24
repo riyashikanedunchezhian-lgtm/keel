@@ -1,30 +1,39 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import { findPlan, plans, type Plan } from "@/lib/plans";
 
 export function SignupFormFromQuery() {
   const searchParams = useSearchParams();
-  return <SignupForm plan={findPlan(searchParams.get("plan") ?? undefined)} />;
+  return (
+    <SignupForm
+      plan={findPlan(searchParams.get("plan") ?? undefined)}
+      initialEmail={searchParams.get("email") ?? ""}
+    />
+  );
 }
 
 function looksLikeEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+async function readError(response: Response) {
+  const body = (await response.json().catch(() => null)) as { error?: string } | null;
+  return body?.error ?? "Something failed. Try again.";
+}
+
 export function LoginForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  const [pending, setPending] = useState(false);
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!looksLikeEmail(email) || password.length < 8) {
-      setNotice("");
       setError(
         !looksLikeEmail(email)
           ? "Enter the email on the workspace."
@@ -33,7 +42,24 @@ export function LoginForm() {
       return;
     }
     setError("");
-    setNotice(email);
+    setPending(true);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        setError(await readError(response));
+        return;
+      }
+      router.push("/account");
+      router.refresh();
+    } catch {
+      setError("The server did not answer. Start the app with npm run dev.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -50,6 +76,7 @@ export function LoginForm() {
         onChange={(event) => setEmail(event.target.value)}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "login-error" : undefined}
+        required
       />
       <label className="mt-4 block text-sm text-mute" htmlFor="login-password">
         Password
@@ -61,70 +88,74 @@ export function LoginForm() {
         autoComplete="current-password"
         value={password}
         onChange={(event) => setPassword(event.target.value)}
+        required
+        minLength={8}
       />
       {error ? (
         <p id="login-error" role="alert" className="mt-3 text-sm text-amber">
           {error}
         </p>
       ) : null}
-      <button className="btn btn-amber mt-6" type="submit">
-        Log in
+      <button className="btn btn-amber mt-6" type="submit" disabled={pending}>
+        {pending ? "Logging in" : "Log in"}
       </button>
-      {notice ? (
-        <p role="status" className="mt-4 text-sm text-mute">
-          This preview has no accounts. If it did, {notice} would land in the last workspace
-          they opened.
-        </p>
-      ) : null}
       <p className="mt-6 text-sm text-mute">
-        No workspace yet? <Link className="nav-link" href="/signup">Start one</Link>
+        No workspace yet?{" "}
+        <Link className="nav-link" href="/signup">
+          Start one
+        </Link>
       </p>
     </form>
   );
 }
 
-export function SignupForm({ plan }: { plan: Plan }) {
-  const reduce = useReducedMotion();
+export function SignupForm({ plan, initialEmail = "" }: { plan: Plan; initialEmail?: string }) {
+  const router = useRouter();
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(initialEmail);
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
   const [chosen, setChosen] = useState(plan.id);
   const [error, setError] = useState("");
-  const [done, setDone] = useState(false);
+  const [pending, setPending] = useState(false);
 
-  function onSubmit(event: FormEvent) {
+  async function onSubmit(event: FormEvent) {
     event.preventDefault();
-    if (name.trim().length < 2 || !looksLikeEmail(email)) {
-      setError(
-        name.trim().length < 2
-          ? "Give the workspace a name the team will recognize."
-          : "Enter a real email so we know where this would go.",
-      );
+    if (name.trim().length < 2) {
+      setError("Give the workspace a name the team will recognize.");
+      return;
+    }
+    if (!looksLikeEmail(email)) {
+      setError("Enter a work email like you@company.com.");
+      return;
+    }
+    if (password.length < 8) {
+      setError("Passwords in Keel are at least 8 characters.");
+      return;
+    }
+    if (password !== confirm) {
+      setError("Type the same password twice.");
       return;
     }
     setError("");
-    setDone(true);
-  }
-
-  if (done) {
-    const selected = plans.find((item) => item.id === chosen) ?? plan;
-    return (
-      <motion.div
-        role="status"
-        initial={reduce ? false : { opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: reduce ? 0 : 0.35 }}
-        className="mt-8 max-w-md border-t border-amber pt-5"
-      >
-        <p className="text-xl tracking-[-0.03em] text-paper">{name.trim()} is ready.</p>
-        <p className="mt-3 text-mute">
-          Plan: {selected.name}. We would have written to {email}. This preview stores the
-          confirmation in the page only.
-        </p>
-        <button type="button" className="btn btn-quiet mt-6" onClick={() => setDone(false)}>
-          Edit details
-        </button>
-      </motion.div>
-    );
+    setPending(true);
+    try {
+      const response = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ workspace: name, email, password, plan: chosen }),
+      });
+      if (!response.ok) {
+        setError(await readError(response));
+        return;
+      }
+      router.push("/account");
+      router.refresh();
+    } catch {
+      setError("The server did not answer. Start the app with npm run dev.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -140,6 +171,7 @@ export function SignupForm({ plan }: { plan: Plan }) {
         autoComplete="organization"
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "signup-error" : undefined}
+        required
       />
       <label className="mt-4 block text-sm text-mute" htmlFor="signup-email">
         Work email
@@ -151,6 +183,33 @@ export function SignupForm({ plan }: { plan: Plan }) {
         autoComplete="email"
         value={email}
         onChange={(event) => setEmail(event.target.value)}
+        required
+      />
+      <label className="mt-4 block text-sm text-mute" htmlFor="signup-password">
+        Password
+      </label>
+      <input
+        id="signup-password"
+        className="field mt-2"
+        type="password"
+        autoComplete="new-password"
+        value={password}
+        onChange={(event) => setPassword(event.target.value)}
+        required
+        minLength={8}
+      />
+      <label className="mt-4 block text-sm text-mute" htmlFor="signup-confirm">
+        Confirm password
+      </label>
+      <input
+        id="signup-confirm"
+        className="field mt-2"
+        type="password"
+        autoComplete="new-password"
+        value={confirm}
+        onChange={(event) => setConfirm(event.target.value)}
+        required
+        minLength={8}
       />
       <label className="mt-4 block text-sm text-mute" htmlFor="signup-plan">
         Plan
@@ -172,9 +231,15 @@ export function SignupForm({ plan }: { plan: Plan }) {
           {error}
         </p>
       ) : null}
-      <button className="btn btn-amber mt-6" type="submit">
-        {chosen === "company" ? "Request a walkthrough" : "Create workspace"}
+      <button className="btn btn-amber mt-6" type="submit" disabled={pending}>
+        {pending ? "Creating" : chosen === "company" ? "Request a walkthrough" : "Create workspace"}
       </button>
+      <p className="mt-6 text-sm text-mute">
+        Already have a workspace?{" "}
+        <Link className="nav-link" href="/login">
+          Log in
+        </Link>
+      </p>
     </form>
   );
 }

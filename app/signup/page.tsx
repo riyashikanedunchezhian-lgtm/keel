@@ -16,8 +16,7 @@ export default function SignupPage() {
           Start a workspace
         </h1>
         <p className="mt-4 max-w-md text-lg text-mute">
-          Name it after the product, not the company. You can invite people once the backlog
-          has something true in it.
+          Name it after the product, not the company. Creating a workspace signs you in.
         </p>
         <Suspense>
           <SignupFormFromQuery />

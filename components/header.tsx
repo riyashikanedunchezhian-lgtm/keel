@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useId, useRef, useState } from "react";
 import { Mark } from "./mark";
+import { useSession } from "./use-session";
 
 const productLinks = [
   { href: "/#intake", title: "Intake", detail: "A thread becomes an issue" },
@@ -27,6 +28,15 @@ export function Header() {
   const productBtn = useRef<HTMLButtonElement>(null);
   const [productOpen, setProductOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const account = useSession();
+  const router = useRouter();
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    closeSheet();
+    router.push("/");
+    router.refresh();
+  }
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -123,12 +133,25 @@ export function Header() {
         </nav>
 
         <div className="hidden items-center gap-5 lg:flex">
-          <Link className="nav-link" href="/login" aria-current={current === "login" ? "page" : undefined}>
-            Log in
-          </Link>
-          <Link className="btn btn-amber" href="/signup">
-            Start a workspace
-          </Link>
+          {account ? (
+            <>
+              <Link className="nav-link" href="/account">
+                {account.workspace}
+              </Link>
+              <button type="button" className="btn btn-quiet" onClick={logout}>
+                Log out
+              </button>
+            </>
+          ) : (
+            <>
+              <Link className="nav-link" href="/login" aria-current={current === "login" ? "page" : undefined}>
+                Log in
+              </Link>
+              <Link className="btn btn-amber" href="/signup">
+                Start a workspace
+              </Link>
+            </>
+          )}
         </div>
 
         <button type="button" className="btn btn-quiet lg:hidden" onClick={openSheet}>
@@ -175,12 +198,25 @@ export function Header() {
             </Link>
           </nav>
           <div className="mt-auto flex flex-col gap-3 pt-8">
-            <Link className="btn btn-quiet" href="/login" onClick={closeSheet}>
-              Log in
-            </Link>
-            <Link className="btn btn-amber" href="/signup" onClick={closeSheet}>
-              Start a workspace
-            </Link>
+            {account ? (
+              <>
+                <Link className="btn btn-quiet" href="/account" onClick={closeSheet}>
+                  {account.workspace}
+                </Link>
+                <button type="button" className="btn btn-amber" onClick={logout}>
+                  Log out
+                </button>
+              </>
+            ) : (
+              <>
+                <Link className="btn btn-quiet" href="/login" onClick={closeSheet}>
+                  Log in
+                </Link>
+                <Link className="btn btn-amber" href="/signup" onClick={closeSheet}>
+                  Start a workspace
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </dialog>
